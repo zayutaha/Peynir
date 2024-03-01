@@ -1,13 +1,71 @@
-use token::Account;
+use eyre::{ContextCompat, Result};
+use token::{Account, EncryptionAlgo};
 
-use crate::token::generate_token;
+use crate::token::{add_token, generate_token};
 pub mod token;
+use clap::Parser;
 
-fn main() {
-    let path = std::env::args().nth(1).unwrap();
-    let accounts = Account::load_tokens(path).unwrap();
-    for account in accounts {
-        let token = generate_token(account).unwrap();
-        println!("{:?}", token);
+#[derive(Parser, PartialEq, Eq, Debug)]
+enum Opt {
+    Get {
+        #[arg(long, short)]
+        account: String,
+    },
+
+    Add {
+        #[arg(long)]
+        account_name: String,
+
+        #[arg(long, short)]
+        secret: String,
+
+        #[arg(long, short)]
+        time: u64,
+
+        #[arg(long, short)]
+        algorithm: EncryptionAlgo,
+
+        #[arg(long)]
+        digits: Option<usize>,
+
+        #[arg(long)]
+        skew: Option<u8>,
+    },
+}
+
+fn main() -> Result<()> {
+    let args = Opt::parse();
+    let mut accounts = Account::load_tokens("token.json".to_string()).unwrap();
+    match args {
+        Opt::Get { account } => {
+            let a = accounts
+                .iter()
+                .find(|x| x.account_name == account)
+                .wrap_err("Account not found")
+                .unwrap();
+            let token = generate_token(a.clone())?;
+            println!("{:?}", token);
+        }
+        Opt::Add {
+            account_name,
+            secret,
+            time,
+            algorithm,
+            digits,
+            skew,
+        } => {
+            let new_account = Account {
+                account_name,
+                secret,
+                time,
+                algorithm,
+                digits,
+                skew,
+            };
+            add_token(&mut accounts, new_account)?;
+            println!("Account added!");
+        }
     }
+    // let path = std::env::args().nth(1).unwrap();
+    Ok(())
 }
