@@ -2,7 +2,7 @@ use eyre::Result;
 use serde::Deserialize;
 use totp_rs::{Algorithm, Secret, TOTP};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub enum EncryptionAlgo {
     SHA1,
     SHA256,
@@ -19,7 +19,7 @@ impl From<EncryptionAlgo> for Algorithm {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Account {
     pub secret: String,
     pub time: u64,
@@ -29,9 +29,9 @@ pub struct Account {
 }
 
 impl Account {
-    pub fn load_token(path: String) -> Result<Account> {
+    pub fn load_tokens(path: String) -> Result<Vec<Account>> {
         let file = std::fs::read_to_string(path)?;
-        let account: Account = serde_json::from_str(&file)?;
+        let account: Vec<Account> = serde_json::from_str(&file)?;
         return Ok(account);
     }
 }
