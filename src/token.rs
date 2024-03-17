@@ -1,8 +1,4 @@
-use std::{
-    fs::OpenOptions,
-    io::{BufWriter, Write},
-    str::FromStr,
-};
+use std::{fs::OpenOptions, io::BufWriter, str::FromStr};
 
 use eyre::{eyre, Result};
 use serde::{Deserialize, Serialize};
@@ -51,7 +47,7 @@ pub struct Account {
 impl Account {
     pub fn load_tokens(path: String) -> Result<Vec<Account>> {
         let file = std::fs::read_to_string(path)?;
-        let account: Vec<Account> = serde_json::from_str(&file)?;
+        let account: Vec<Account> = serde_json::from_str(&file).unwrap_or(Vec::new());
         return Ok(account);
     }
 }
@@ -78,5 +74,21 @@ pub fn add_token(accounts: &mut Vec<Account>, account: Account) -> Result<()> {
     accounts.push(account);
     let mut writer = BufWriter::new(file);
     serde_json::to_writer(&mut writer, &accounts)?;
+    Ok(())
+}
+
+pub fn delete_token(accounts: &mut Vec<Account>, account: String) -> Result<()> {
+    let file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open("./token.json")?;
+    let index = accounts
+        .iter()
+        .position(|x| x.account_name == account)
+        .expect("Token should exist");
+    accounts.remove(index);
+    println!("{:?} removed!", account);
+    let mut writer = BufWriter::new(file);
+    serde_json::to_writer(&mut writer, accounts)?;
     Ok(())
 }

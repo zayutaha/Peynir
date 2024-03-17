@@ -1,5 +1,5 @@
 use eyre::{ContextCompat, Result};
-use token::{Account, EncryptionAlgo};
+use token::{delete_token, Account, EncryptionAlgo};
 
 use crate::token::{add_token, generate_token};
 pub mod token;
@@ -30,6 +30,11 @@ enum Opt {
 
         #[arg(long)]
         skew: Option<u8>,
+    },
+
+    Delete {
+        #[arg(long)]
+        name: String,
     },
 }
 
@@ -64,6 +69,9 @@ fn main() -> Result<()> {
             };
             add_token(&mut accounts, new_account)?;
             println!("Account added!");
+        }
+        Opt::Delete { name } => {
+            delete_token(&mut accounts, name)?;
         }
     }
     // let path = std::env::args().nth(1).unwrap();
