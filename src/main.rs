@@ -1,48 +1,21 @@
-use eyre::{ContextCompat, Result};
-use models::{Account, EncryptionAlgo};
-use token::delete_token;
-
-use crate::token::{add_token, generate_token};
+pub mod cli;
+pub mod list;
 pub mod models;
 pub mod token;
+
+use std::time::Duration;
+
+use crate::token::{add_token, generate_token};
 use clap::Parser;
-
-#[derive(Parser, PartialEq, Eq, Debug)]
-enum Opt {
-    Get {
-        #[arg(long, short)]
-        account: String,
-    },
-
-    Add {
-        #[arg(long)]
-        account_name: String,
-
-        #[arg(long, short)]
-        secret: String,
-
-        #[arg(long, short)]
-        time: u64,
-
-        #[arg(long, short)]
-        algorithm: EncryptionAlgo,
-
-        #[arg(long)]
-        digits: Option<usize>,
-
-        #[arg(long)]
-        skew: Option<u8>,
-    },
-
-    Delete {
-        #[arg(long)]
-        name: String,
-    },
-}
+use cli::Opt;
+use eyre::{ContextCompat, Result};
+use list::display_tokens;
+use models::Token;
+use token::delete_token;
 
 fn main() -> Result<()> {
     let args = Opt::parse();
-    let mut accounts = Account::load_tokens("token.json".to_string()).unwrap();
+    let mut accounts = Token::load_tokens("tokens.json".to_string()).unwrap();
     match args {
         Opt::Get { account } => {
             let a = accounts
@@ -61,7 +34,7 @@ fn main() -> Result<()> {
             digits,
             skew,
         } => {
-            let new_account = Account {
+            let new_account = Token {
                 account_name,
                 secret,
                 time,
@@ -75,6 +48,18 @@ fn main() -> Result<()> {
         Opt::Delete { name } => {
             delete_token(&mut accounts, name, None)?;
         }
+        Opt::List {} => loop {
+            let mut tokens = Vec::new();
+            for a in accounts.clone() {
+                tokens.push((a.account_name.clone(), generate_token(a.clone()).unwrap()));
+            }
+            display_tokens(tokens)?;
+            let mut tokens = Vec::new();
+            for a in accounts.clone() {
+                tokens.push((a.account_name.clone(), generate_token(a.clone()).unwrap()));
+            }
+            std::thread::sleep(Duration::from_secs(30));
+        },
     }
     // let path = std::env::args().nth(1).unwrap();
     Ok(())
@@ -82,21 +67,18 @@ fn main() -> Result<()> {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        fs::File,
-        io::{BufRead, Read},
-    };
+    use std::fs::File;
 
     use eyre::Result;
     use tempdir::TempDir;
 
     use crate::{
-        models::{Account, EncryptionAlgo},
+        models::{EncryptionAlgo, Token},
         token::{add_token, delete_token},
     };
 
     fn init_account() -> Result<(TempDir, String)> {
-        let test_account = Account {
+        let test_account = Token {
             account_name: "Haduba".into(),
             secret: "xyz".into(),
             time: 30,
@@ -114,7 +96,7 @@ mod test {
 
     #[test]
     fn user_adds_account() -> Result<()> {
-        let test_account = Account {
+        let test_account = Token {
             account_name: "Haduba".into(),
             secret: "xyz".into(),
             time: 30,
@@ -123,7 +105,7 @@ mod test {
             skew: None,
         };
         let (dir, path) = init_account()?;
-        let loaded_accounts = Account::load_tokens(path.clone())?;
+        let loaded_accounts = Token::load_tokens(path.clone())?;
         dir.close()?;
         assert_eq!(loaded_accounts, vec![test_account]);
         Ok(())
@@ -133,7 +115,7 @@ mod test {
     fn user_deletes_account() -> Result<()> {
         let (dir, path) = init_account()?;
         delete_token(&mut Vec::new(), "Haduba".to_string(), Some(path.clone()))?;
-        let loaded_accounts = Account::load_tokens(path.clone())?;
+        let loaded_accounts = Token::load_tokens(path.clone())?;
         dir.close()?;
         assert_eq!(loaded_accounts, vec![]);
         Ok(())

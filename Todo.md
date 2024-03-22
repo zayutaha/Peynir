@@ -2,7 +2,6 @@
 
 # Task
 
-- [ ] Implement list feature
 - [ ] Allow tokens to be generated using multiple algorithms
 
 # Bugs
@@ -12,3 +11,4 @@
 # Completed
 
 - [x] Rename Account to Token
+- [x] Implement list feature

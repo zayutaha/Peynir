@@ -25,7 +25,7 @@ impl FromStr for EncryptionAlgo {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
-pub struct Account {
+pub struct Token {
     pub account_name: String,
     pub secret: String,
     pub time: u64,
@@ -34,10 +34,10 @@ pub struct Account {
     pub skew: Option<u8>,
 }
 
-impl Account {
-    pub fn load_tokens(path: String) -> Result<Vec<Account>> {
+impl Token {
+    pub fn load_tokens(path: String) -> Result<Vec<Token>> {
         let file = std::fs::read_to_string(path)?;
-        let account: Vec<Account> = serde_json::from_str(&file).unwrap_or(Vec::new());
+        let account: Vec<Token> = serde_json::from_str(&file).unwrap_or(Vec::new());
         Ok(account)
     }
 }
