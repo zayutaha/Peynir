@@ -1,7 +1,9 @@
 use eyre::{ContextCompat, Result};
-use token::{delete_token, Account, EncryptionAlgo};
+use models::{Account, EncryptionAlgo};
+use token::delete_token;
 
 use crate::token::{add_token, generate_token};
+pub mod models;
 pub mod token;
 use clap::Parser;
 
@@ -67,13 +69,73 @@ fn main() -> Result<()> {
                 digits,
                 skew,
             };
-            add_token(&mut accounts, new_account)?;
+            add_token(&mut accounts, new_account, None)?;
             println!("Account added!");
         }
         Opt::Delete { name } => {
-            delete_token(&mut accounts, name)?;
+            delete_token(&mut accounts, name, None)?;
         }
     }
     // let path = std::env::args().nth(1).unwrap();
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use std::{
+        fs::File,
+        io::{BufRead, Read},
+    };
+
+    use eyre::Result;
+    use tempdir::TempDir;
+
+    use crate::{
+        models::{Account, EncryptionAlgo},
+        token::{add_token, delete_token},
+    };
+
+    fn init_account() -> Result<(TempDir, String)> {
+        let test_account = Account {
+            account_name: "Haduba".into(),
+            secret: "xyz".into(),
+            time: 30,
+            algorithm: EncryptionAlgo::SHA1,
+            digits: None,
+            skew: None,
+        };
+        let tmp_dir = TempDir::new("test_dir")?;
+        let file_path = tmp_dir.path().join("token.json");
+        let path = file_path.to_str().unwrap().to_string();
+        File::create(path.clone())?;
+        add_token(&mut Vec::new(), test_account.clone(), Some(path.clone()))?;
+        Ok((tmp_dir, path))
+    }
+
+    #[test]
+    fn user_adds_account() -> Result<()> {
+        let test_account = Account {
+            account_name: "Haduba".into(),
+            secret: "xyz".into(),
+            time: 30,
+            algorithm: EncryptionAlgo::SHA1,
+            digits: None,
+            skew: None,
+        };
+        let (dir, path) = init_account()?;
+        let loaded_accounts = Account::load_tokens(path.clone())?;
+        dir.close()?;
+        assert_eq!(loaded_accounts, vec![test_account]);
+        Ok(())
+    }
+
+    #[test]
+    fn user_deletes_account() -> Result<()> {
+        let (dir, path) = init_account()?;
+        delete_token(&mut Vec::new(), "Haduba".to_string(), Some(path.clone()))?;
+        let loaded_accounts = Account::load_tokens(path.clone())?;
+        dir.close()?;
+        assert_eq!(loaded_accounts, vec![]);
+        Ok(())
+    }
 }
