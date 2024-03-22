@@ -24,14 +24,15 @@ pub fn delete_token(
     path: Option<String>,
 ) -> Result<()> {
     let file = OpenOptions::new()
-        .read(true)
+        .read(false)
+        .write(true)
+        .truncate(true)
         .open(path.unwrap_or("./tokens.json".into()))?;
     let index = accounts
         .iter()
         .position(|x| x.account_name == account)
         .expect("Token should exist");
     accounts.remove(index);
-    println!("{accounts:?}");
     println!("{:?} removed!", account);
     let mut writer = BufWriter::new(file);
     serde_json::to_writer(&mut writer, accounts)?;
