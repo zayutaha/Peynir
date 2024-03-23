@@ -38,3 +38,9 @@ pub fn delete_token(
     serde_json::to_writer(&mut writer, accounts)?;
     Ok(())
 }
+
+pub fn load_tokens(path: String) -> Result<Vec<Token>> {
+    let file = std::fs::read_to_string(path)?;
+    let account: Vec<Token> = serde_json::from_str(&file).unwrap_or(Vec::new());
+    Ok(account)
+}

@@ -3,7 +3,7 @@ pub mod list;
 pub mod models;
 pub mod token;
 
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::token::{add_token, generate_token};
 use clap::Parser;
@@ -11,11 +11,11 @@ use cli::Opt;
 use eyre::{ContextCompat, Result};
 use list::display_tokens;
 use models::Token;
-use token::delete_token;
+use token::{delete_token, load_tokens};
 
 fn main() -> Result<()> {
     let args = Opt::parse();
-    let mut accounts = Token::load_tokens("tokens.json".to_string()).unwrap();
+    let mut accounts = load_tokens("tokens.json".to_string()).unwrap();
     match args {
         Opt::Get { account } => {
             let a = accounts
@@ -26,21 +26,11 @@ fn main() -> Result<()> {
             let token = generate_token(a.clone())?;
             println!("{:?}", token);
         }
-        Opt::Add {
-            account_name,
-            secret,
-            time,
-            algorithm,
-            digits,
-            skew,
-        } => {
+        Opt::Add { name, secret, time } => {
             let new_account = Token {
-                account_name,
+                account_name: name,
                 secret,
                 time,
-                algorithm,
-                digits,
-                skew,
             };
             add_token(&mut accounts, new_account, None)?;
             println!("Account added!");
@@ -58,7 +48,9 @@ fn main() -> Result<()> {
             for a in accounts.clone() {
                 tokens.push((a.account_name.clone(), generate_token(a.clone()).unwrap()));
             }
-            std::thread::sleep(Duration::from_secs(30));
+            std::thread::sleep(Duration::from_secs(
+                SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() % 30,
+            ));
         },
     }
     // let path = std::env::args().nth(1).unwrap();
@@ -73,8 +65,8 @@ mod test {
     use tempdir::TempDir;
 
     use crate::{
-        models::{EncryptionAlgo, Token},
-        token::{add_token, delete_token},
+        models::Token,
+        token::{add_token, delete_token, load_tokens},
     };
 
     fn init_account() -> Result<(TempDir, String)> {
@@ -82,14 +74,12 @@ mod test {
             account_name: "Haduba".into(),
             secret: "xyz".into(),
             time: 30,
-            algorithm: EncryptionAlgo::SHA1,
-            digits: None,
-            skew: None,
         };
         let tmp_dir = TempDir::new("test_dir")?;
         let file_path = tmp_dir.path().join("token.json");
         let path = file_path.to_str().unwrap().to_string();
         File::create(path.clone())?;
+        println!("{:?}", path.clone());
         add_token(&mut Vec::new(), test_account.clone(), Some(path.clone()))?;
         Ok((tmp_dir, path))
     }
@@ -100,13 +90,11 @@ mod test {
             account_name: "Haduba".into(),
             secret: "xyz".into(),
             time: 30,
-            algorithm: EncryptionAlgo::SHA1,
-            digits: None,
-            skew: None,
         };
         let (dir, path) = init_account()?;
-        let loaded_accounts = Token::load_tokens(path.clone())?;
+        let loaded_accounts = load_tokens(path.clone())?;
         dir.close()?;
+        println!("{:?}", loaded_accounts);
         assert_eq!(loaded_accounts, vec![test_account]);
         Ok(())
     }
@@ -114,8 +102,9 @@ mod test {
     #[test]
     fn user_deletes_account() -> Result<()> {
         let (dir, path) = init_account()?;
-        delete_token(&mut Vec::new(), "Haduba".to_string(), Some(path.clone()))?;
-        let loaded_accounts = Token::load_tokens(path.clone())?;
+        let mut tokens = load_tokens(path.clone())?;
+        delete_token(&mut tokens, "Haduba".to_string(), Some(path.clone()))?;
+        let loaded_accounts = load_tokens(path.clone())?;
         dir.close()?;
         assert_eq!(loaded_accounts, vec![]);
         Ok(())
