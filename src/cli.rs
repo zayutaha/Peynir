@@ -4,7 +4,7 @@ use clap::{arg, Parser};
 pub enum Opt {
     Get {
         #[arg(long, short)]
-        account: String,
+        name: String,
     },
 
     Add {
