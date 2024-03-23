@@ -76,7 +76,7 @@ mod test {
             time: 30,
         };
         let tmp_dir = TempDir::new("test_dir")?;
-        let file_path = tmp_dir.path().join("token.json");
+        let file_path = tmp_dir.path().join("tokens.json");
         let path = file_path.to_str().unwrap().to_string();
         File::create(path.clone())?;
         println!("{:?}", path.clone());

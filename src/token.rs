@@ -1,5 +1,8 @@
 use eyre::Result;
-use std::{fs::OpenOptions, io::BufWriter};
+use std::{
+    fs::{File, OpenOptions},
+    io::BufWriter,
+};
 
 use crate::models::Token;
 pub fn generate_token(account: Token) -> Result<String> {
@@ -40,7 +43,10 @@ pub fn delete_token(
 }
 
 pub fn load_tokens(path: String) -> Result<Vec<Token>> {
-    let file = std::fs::read_to_string(path)?;
+    let file = std::fs::read_to_string(path).unwrap_or_else(|_| {
+        File::create("tokens.json".to_string()).unwrap();
+        "".to_string()
+    });
     let account: Vec<Token> = serde_json::from_str(&file).unwrap_or(Vec::new());
     Ok(account)
 }
