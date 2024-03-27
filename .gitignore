@@ -1,1 +1,4 @@
 /target
+/tokens.json
+/Cargo.lock
+/.DS_Store
